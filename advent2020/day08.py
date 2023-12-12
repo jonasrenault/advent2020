@@ -1,4 +1,5 @@
 from utils.utils import Advent
+from tqdm import tqdm
 
 advent = Advent(8)
 
@@ -10,7 +11,7 @@ def main():
 
 
 def run_all(prog: list[str]) -> int:
-    for idx, line in enumerate(prog):
+    for idx, line in tqdm(enumerate(prog)):
         if line.startswith("nop"):
             acc, finished = run(prog[:idx] + ["jmp" + line[3:]] + prog[idx + 1 :])
             if finished:
