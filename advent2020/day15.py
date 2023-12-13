@@ -1,5 +1,5 @@
-from utils.utils import Advent
 from tqdm import tqdm
+from utils.utils import Advent
 
 advent = Advent(15)
 
