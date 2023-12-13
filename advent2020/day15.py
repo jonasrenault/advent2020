@@ -1,4 +1,5 @@
 from utils.utils import Advent
+from tqdm import tqdm
 
 advent = Advent(15)
 
@@ -6,27 +7,26 @@ advent = Advent(15)
 def main():
     lines = advent.get_input_lines()
     history = [int(x) for x in lines[0].split(",")]
-    history = run(history, 2020)
-    # advent.submit(1, history[-1])
-    history = [int(x) for x in lines[0].split(",")]
-    history = run(history, 30000000)
-    history[-1]
+    cache = {k: (i + 1,) for i, k in enumerate(history)}
+    advent.submit(1, run(history[-1], cache, len(history), 2020))
+
+    cache = {k: (i + 1,) for i, k in enumerate(history)}
+    advent.submit(2, run(history[-1], cache, len(history), 30000000))
 
 
-def run(history, size):
-    while len(history) < size:
-        last = history[-1]
-        c = history.count(last)
-        if c == 1:
-            history.append(0)
+def run(last: int, cache: dict[int, tuple[int, ...]], turn: int, limit: int) -> int:
+    for i in tqdm(range(turn + 1, limit + 1)):
+        is_first = len(cache[last]) == 1
+        if is_first:
+            last = 0
         else:
-            history.append(len(history) - last_index(history[:-1], last) - 1)
-    return history
+            last = i - 1 - cache[last][1]
 
-
-def last_index(l, v):
-    i = l[::-1].index(v)
-    return len(l) - 1 - i
+        if last in cache:
+            cache[last] = (i, cache[last][0])
+        else:
+            cache[last] = (i,)
+    return last
 
 
 if __name__ == "__main__":
