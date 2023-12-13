@@ -9,8 +9,48 @@ def main():
     er = [is_invalid(rules, t) for t in tickets]
     advent.submit(1, sum(er))
 
+    tickets = [ticket] + [t for t in tickets if not is_invalid(rules, t)]
+    cols = {}
+    possible = set(range(len(ticket)))
+    while len(cols) != len(rules):
+        start_s = len(possible)
+        for k, r in rules.items():
+            p = find_possible(possible, r, tickets)
+            if len(p) == 1:
+                possible = possible - p
+                cols[k] = p.pop()
+        end_s = len(possible)
+        if start_s == end_s:
+            break
 
-def is_invalid(rules, ticket) -> int:
+    val = 1
+    for k, c in cols.items():
+        if k.startswith("departure"):
+            print(f"{k}: {ticket[c]}")
+            val *= ticket[c]
+    advent.submit(2, val)
+
+
+def find_possible(
+    possible: set[int],
+    rule: tuple[tuple[int, int], tuple[int, int]],
+    tickets: list[list[int]],
+) -> set[int]:
+    a, b = rule
+    p = set(possible)
+    for i in range(len(tickets[0])):
+        if i in p:
+            for t in tickets:
+                v = t[i]
+                if not (a[0] <= v <= a[1] or b[0] <= v <= b[1]):
+                    p.remove(i)
+                    break
+    return p
+
+
+def is_invalid(
+    rules: dict[str, tuple[tuple[int, int], tuple[int, int]]], ticket: list[int]
+) -> int:
     for val in ticket:
         for a, b in rules.values():
             if a[0] <= val <= a[1] or b[0] <= val <= b[1]:
@@ -20,7 +60,11 @@ def is_invalid(rules, ticket) -> int:
     return 0
 
 
-def parse(lines):
+def parse(
+    lines: list[str],
+) -> tuple[
+    dict[str, tuple[tuple[int, int], tuple[int, int]]], list[int], list[list[int]]
+]:
     rules = {}
     ticket = None
     tickets = []
