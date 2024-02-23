@@ -1,6 +1,4 @@
 from utils.utils import Advent
-from collections import deque
-from collections.abc import Iterable
 
 advent = Advent(22)
 
@@ -9,80 +7,76 @@ def main():
     lines = advent.get_input_lines()
     decks = get_decks(lines)
 
-    while len(decks[0]) > 0 and len(decks[1]) > 0:
-        play_round(decks)
+    deck1, deck2 = play_game(*decks)
+    deck = deck1
+    if len(deck2) > 0:
+        deck = deck2
+    advent.submit(1, sum([x * (len(deck) - i) for i, x in enumerate(deck)]))
 
-    if len(decks[0]) > 0:
-        deck = decks[0]
-    else:
-        deck = decks[1]
-    # advent.submit(1, sum([x * (len(deck) - i) for i, x in enumerate(deck)]))
-
-    decks = get_decks(lines)
-    play_recursive_game(decks, 1)
-    print(decks)
+    deck1, deck2 = play_recursive_game(*decks)
+    deck = deck1
+    if len(deck2) > 0:
+        deck = deck2
+    advent.submit(2, sum([x * (len(deck) - i) for i, x in enumerate(deck)]))
 
 
 def play_recursive_game(
-    decks: tuple[deque[int], deque[int]], game_id: int
-) -> tuple[tuple[Iterable[int], Iterable[int]], int]:
+    deck1: tuple[int, ...], deck2: tuple[int, ...]
+) -> tuple[tuple[int, ...], tuple[int, ...]]:
     history = set()
-    print(f"Playing Game {game_id}")
-    game_counts = 0
-    while len(decks[0]) > 0 and len(decks[1]) > 0:
-        game = ",".join(map(str, decks[0])) + "|" + ",".join(map(str, decks[1]))
+    while len(deck1) > 0 and len(deck2) > 0:
+        game = ",".join(map(str, deck1)) + "|" + ",".join(map(str, deck2))
         if game in history:
-            return ([], [1]), game_counts
+            return ((1,), ())
         history.add(game)
-        game_counts += play_recursive_round(decks, game_id + game_counts)
+        deck1, deck2 = play_recursive_round(deck1, deck2)
 
-    print(f"Finished Game {game_id}")
-    return decks, game_counts
+    return deck1, deck2
 
 
-def play_recursive_round(decks: tuple[deque[int], deque[int]], game_id: int) -> int:
-    l = decks[0].popleft()
-    r = decks[1].popleft()
+def play_recursive_round(
+    deck1: tuple[int, ...], deck2: tuple[int, ...]
+) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    l = deck1[0]
+    r = deck2[0]
 
-    if len(decks[0]) >= l and len(decks[1]) >= r:
-        (dl, _), c = play_recursive_game(
-            (deque(decks[0]), deque(decks[1])), game_id + 1
-        )
-        if len(dl) == 0:  # Player1 won
-            decks[1].append(r)
-            decks[1].append(l)
-        else:
-            decks[0].append(l)
-            decks[0].append(r)
-        return 1 + c
+    if len(deck1[1:]) >= l and len(deck2[1:]) >= r:
+        dl, _ = play_recursive_game(deck1[1 : l + 1], deck2[1 : r + 1])
+        if len(dl) == 0:  # Player2 won
+            return deck1[1:], deck2[1:] + (r, l)
+        return deck1[1:] + (l, r), deck2[1:]
     else:  # regular round
         if l > r:
-            decks[0].append(l)
-            decks[0].append(r)
-        else:
-            decks[1].append(r)
-            decks[1].append(l)
-        return 0
+            return deck1[1:] + (l, r), deck2[1:]
+        return deck1[1:], deck2[1:] + (r, l)
 
 
-def play_round(decks: tuple[deque[int], deque[int]]):
+def play_game(
+    deck1: tuple[int, ...], deck2: tuple[int, ...]
+) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    while len(deck1) > 0 and len(deck2) > 0:
+        deck1, deck2 = play_round(deck1, deck2)
+
+    return deck1, deck2
+
+
+def play_round(
+    deck1: tuple[int, ...], deck2: tuple[int, ...]
+) -> tuple[tuple[int, ...], tuple[int, ...]]:
     """
     Play a round
 
     Args:
         decks (tuple[deque[int], deque[int]]): decks
     """
-    l = decks[0].popleft()
-    r = decks[1].popleft()
+    l = deck1[0]
+    r = deck2[0]
     if l > r:
-        decks[0].append(l)
-        decks[0].append(r)
-    else:
-        decks[1].append(r)
-        decks[1].append(l)
+        return deck1[1:] + (l, r), deck2[1:]
+    return deck1[1:], deck2[1:] + (r, l)
 
 
-def get_decks(lines: list[str]) -> tuple[deque[int], deque[int]]:
+def get_decks(lines: list[str]) -> tuple[tuple[int, ...], tuple[int, ...]]:
     """
     Read decks
 
@@ -90,7 +84,7 @@ def get_decks(lines: list[str]) -> tuple[deque[int], deque[int]]:
         lines (list[str]): input lines
 
     Returns:
-        tuple[deque[int], deque[int]]: decks
+        tuple[tuple[int, ...], tuple[int, ...]]: decks
     """
     decks = []
     deck = []
@@ -98,11 +92,11 @@ def get_decks(lines: list[str]) -> tuple[deque[int], deque[int]]:
         if not line:
             continue
         if line.startswith("Player"):
-            decks.append(deque(deck))
+            decks.append(tuple(deck))
             deck = []
         else:
             deck.append(int(line))
-    decks.append(deque(deck))
+    decks.append(tuple(deck))
     return tuple(decks)
 
 
