@@ -1,14 +1,19 @@
-from utils.utils import Advent
-import numpy as np
-import numpy.typing as npt
-from itertools import combinations
 from collections import defaultdict
 from collections.abc import Iterator
-from tqdm import tqdm
+from itertools import combinations
 from math import prod, sqrt
-from utils.algos import neighbors
+
+import numpy as np
+import numpy.typing as npt
+from tqdm import tqdm
+from utils.utils import Advent
 
 advent = Advent(20)
+
+
+MONSTER = """                  #
+#    ##    ##    ###
+ #  #  #  #  #  #   """
 
 
 def main():
@@ -17,7 +22,7 @@ def main():
 
     matching_tiles = get_matching_tiles(tiles)
     # corners have only 2 edges
-    # advent.submit(1, prod([k for k, v in matching_tiles.items() if len(v) == 2]))
+    advent.submit(1, prod([k for k, v in matching_tiles.items() if len(v) == 2]))
 
     puzzle = build_puzzle(tiles, matching_tiles)
 
@@ -25,14 +30,63 @@ def main():
     puzzle = [[c[1:-1, 1:-1] for c in r] for r in puzzle]
     puzzle = [np.concatenate(r, axis=1) for r in puzzle]
     image = np.concatenate(puzzle, axis=0)
-    for r in range(image.shape[0]):
-        print("".join(image[r, :].tolist()))
+
+    advent.submit(2, find_monsters(MONSTER, image))
+
+
+def find_monsters(pattern: str, image: npt.NDArray[np.str_]) -> int:
+    """
+    Find pattern occurences in arrangements of image
+
+    Args:
+        pattern (str): the pattern
+        image (npt.NDArray[np.str_]): the image
+
+    Returns:
+        int: the water roughness
+    """
+    # get deltas for # in pattern
+    deltas = []
+    for x, row in enumerate(pattern.split("\n")):
+        for y, c in enumerate(row):
+            if c == "#":
+                deltas.append((x, y))
+
+    # for each arrangement of image, count matching patterns
+    pattern_r = len(pattern.split("\n"))
+    pattern_c = len(pattern.split("\n")[0])
+    image_r, image_c = image.shape
+    monsters = 0
+    for r_image in arrangements(image):
+        for x in range(image_r - pattern_r):
+            for y in range(image_c - pattern_c):
+                if all([r_image[x + dx, y + dy] == "#" for dx, dy in deltas]):
+                    monsters += 1
+
+        if monsters > 0:
+            break
+
+    # count number of # not in patterns
+    water_cells = np.count_nonzero(image == "#")
+    monster_cells = len(deltas)
+    roughness = water_cells - monsters * monster_cells
+    return roughness
 
 
 def build_puzzle(
     tiles: dict[int, npt.NDArray[np.str_]],
     matching_tiles: dict[int, list[int]],
 ) -> list[list[npt.NDArray[np.str_]]]:
+    """
+    Build puzzle by placing tiles
+
+    Args:
+        tiles (dict[int, npt.NDArray[np.str_]]): the tiles
+        matching_tiles (dict[int, list[int]]): the tiles' matching edges
+
+    Returns:
+        list[list[npt.NDArray[np.str_]]]: matrix of rotated tiles
+    """
     image_dimension = int(sqrt(len(tiles)))
 
     # Get and orient top left corner
